@@ -21,6 +21,7 @@ import {
 import { useRequestBindingToken } from '@/hooks/consumer/useDevices';
 import { usePollForNewDevice } from '@/hooks/consumer/useDevices';
 import { useDeviceStore } from '@/stores/deviceStore';
+import { ESPProvisioner, Security1 } from 'esp-ble-prov';
 
 type Step = 'token' | 'ble' | 'wifi' | 'confirm';
 
@@ -45,7 +46,7 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
   const [ssid, setSsid] = useState('');
   const [wifiPassword, setWifiPassword] = useState('');
   const [bleDevice, setBleDevice] = useState<BluetoothDevice | null>(null);
-  const [gattChar, setGattChar] = useState<BluetoothRemoteGATTCharacteristic | null>(null);
+  const [provisioner, setProvisioner] = useState<ESPProvisioner | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [bleConnecting, setBleConnecting] = useState(false);
   const [sending, setSending] = useState(false);
@@ -84,7 +85,7 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
     setSsid('');
     setWifiPassword('');
     setBleDevice(null);
-    setGattChar(null);
+    setProvisioner(null);
     setError(null);
     setBleConnecting(false);
     setSending(false);
@@ -119,17 +120,15 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
     setError(null);
     setBleConnecting(true);
     try {
-      const device = await (navigator as Navigator & { bluetooth: Bluetooth }).bluetooth.requestDevice({
+      const prov = new ESPProvisioner({
+        serviceUUID: '0000ff01-0000-1000-8000-00805f9b34fb'
+      });
+      const device = await prov.connect({
         filters: [{ namePrefix: 'PROV_' }],
-        optionalServices: ['0000ff01-0000-1000-8000-00805f9b34fb'], // custom provisioning service
       });
 
-      const server = await device.gatt!.connect();
-      const service = await server.getPrimaryService('0000ff01-0000-1000-8000-00805f9b34fb');
-      const characteristic = await service.getCharacteristic('0000ff02-0000-1000-8000-00805f9b34fb');
-
+      setProvisioner(prov);
       setBleDevice(device);
-      setGattChar(characteristic);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Bluetooth connection failed';
       if (!msg.includes('User cancelled')) {
@@ -141,19 +140,24 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
   }
 
   async function sendProvisioningPayload() {
-    if (!gattChar || !bindingToken) return;
+    if (!provisioner || !bindingToken) return;
     setError(null);
     setSending(true);
 
-    const payload = JSON.stringify({
-      wifi_ssid: ssid.trim(),
-      wifi_password: wifiPassword,
-      binding_token: bindingToken,
-    });
-
     try {
+      // 1. Establish Secure Curve25519 Session using the PIN
+      provisioner.security = new Security1({ pop: pin });
+      await provisioner.establishSession();
+
+      // 2. Send the binding_token to the custom-data endpoint securely
       const encoder = new TextEncoder();
-      await gattChar.writeValue(encoder.encode(payload));
+      await provisioner.writeValueToEndpoint('custom-data', encoder.encode(bindingToken));
+
+      // 3. Send the Wi-Fi credentials via the secure config endpoint
+      await provisioner.sendCredentials({ 
+        ssid: encoder.encode(ssid.trim()), 
+        passphrase: encoder.encode(wifiPassword)
+      });
       setStep('confirm');
       startPolling();
     } catch (err: unknown) {
