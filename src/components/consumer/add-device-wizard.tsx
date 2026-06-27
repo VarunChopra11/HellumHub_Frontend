@@ -151,7 +151,10 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
 
       // 2. Send the binding_token to the custom-data endpoint securely
       const encoder = new TextEncoder();
+      // CRITICAL: We MUST read the response to decrypt it, which advances the AES-CTR nonce counter.
+      // If we don't do this, the frontend and ESP32 encryption states go out of sync and Wi-Fi provisioning fails!
       await provisioner.writeValueToEndpoint('custom-data', encoder.encode(bindingToken));
+      await provisioner.readValueFromEndpoint('custom-data');
 
       // 3. Send the Wi-Fi credentials via the secure config endpoint
       await provisioner.sendCredentials({ 
