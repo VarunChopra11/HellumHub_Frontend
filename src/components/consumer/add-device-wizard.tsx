@@ -27,7 +27,7 @@ type Step = 'token' | 'ble' | 'wifi' | 'confirm';
 
 const STEP_INFO: Record<Step, { title: string; subtitle: string; icon: React.ElementType }> = {
   token:   { title: 'Preparing Binding Token', subtitle: 'Generating a secure pairing code for your device', icon: Key },
-  ble:     { title: 'Connect via Bluetooth',  subtitle: 'Scan for your device and enter the 8-character PIN', icon: Bluetooth },
+  ble:     { title: 'Connect via Bluetooth',  subtitle: 'Scan for your device and enter the 9-character PIN', icon: Bluetooth },
   wifi:    { title: 'Wi-Fi Credentials',       subtitle: 'Your device will use these to connect to the internet', icon: Wifi },
   confirm: { title: 'Binding in Progress',     subtitle: 'Your device is connecting and registering with Hellum', icon: CheckCircle2 },
 };
@@ -287,7 +287,7 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
                 {[
                   { n: 1, text: 'Power on your Hellum device — the LED will blink blue' },
                   { n: 2, text: 'Click "Scan for Device" and select PROV_XXXXXX from the list' },
-                  { n: 3, text: 'Enter the 8-character Factory PIN printed on the device label' },
+                  { n: 3, text: 'Enter the 9-character Connection PIN printed on the device label' },
                 ].map(({ n, text }) => (
                   <div key={n} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                     <div style={{
@@ -330,13 +330,13 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
                   </div>
 
                   <div>
-                    <Label htmlFor="device-pin">Factory PIN (8 characters)</Label>
+                    <Label htmlFor="device-pin">Connection PIN (9 characters)</Label>
                     <Input
                       id="device-pin"
                       value={pin}
-                      onChange={(e) => setPin(e.target.value.toUpperCase().slice(0, 8))}
-                      placeholder="e.g. AB12CD34"
-                      maxLength={8}
+                      onChange={(e) => setPin(e.target.value.toUpperCase().slice(0, 9))}
+                      placeholder="e.g. HELLUM123"
+                      maxLength={9}
                       style={{ marginTop: 8, fontFamily: 'monospace', letterSpacing: '0.15em', fontSize: 15 }}
                     />
                     <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
@@ -346,7 +346,7 @@ export function AddDeviceWizard({ open, onOpenChange }: AddDeviceWizardProps) {
 
                   <Button
                     onClick={() => setStep('wifi')}
-                    disabled={pin.length !== 8}
+                    disabled={pin.length !== 9}
                     style={{ width: '100%' }}
                   >
                     Continue
