@@ -8,6 +8,7 @@ import { AdminRoutes } from '@/router/admin-routes';
 // Consumer pages
 import { ConsumerLoginPage } from '@/pages/app/login-page';
 import { ConsumerDashboardPage } from '@/pages/app/dashboard-page';
+import { OAuthAuthorizePage } from '@/pages/app/oauth-authorize-page';
 
 // Admin pages
 import { AdminLoginPage } from '@/pages/admin/admin-login-page';
@@ -41,6 +42,7 @@ export default function App() {
       <Route index element={<Navigate to="/app" replace />} />
 
       {/* ─── Consumer Portal (/app) ─────────────────────────────────────── */}
+      <Route path="/oauth/authorize" element={<OAuthAuthorizePage />} />
       <Route path="/app/login" element={<ConsumerLoginPage />} />
       <Route path="/app" element={<ConsumerRoutes />}>
         <Route index element={<Navigate to="/app/dashboard" replace />} />
